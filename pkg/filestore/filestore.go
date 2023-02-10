@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/tus/tusd/internal/uid"
 	"github.com/tus/tusd/pkg/handler"
@@ -48,10 +49,58 @@ func (store FileStore) UseIn(composer *handler.StoreComposer) {
 	composer.UseLengthDeferrer(store)
 }
 
+func isDirExists(path string) bool {
+	fi, err := os.Stat(path)
+
+	if err != nil {
+		return os.IsExist(err)
+	} else {
+		return fi.IsDir()
+	}
+}
+
+func (store FileStore) GetFileDirPath(id string) (path string) {
+	srcId := []byte(id)
+	if len(srcId) >= 32 && len(srcId) < 36 {
+		currentDate := [8]byte{0}
+		for i := 0; i < 8; i++ {
+			currentDate[i] = srcId[(i*4)+1]
+		}
+		_, err := time.Parse("20060102", string(currentDate[0:8]))
+		if err != nil {
+			return ""
+		}
+		return string(currentDate[0:8])
+	} else if len(srcId) >= 36 {
+		currentDate := [10]byte{0}
+		for i := 0; i < 10; i++ {
+			currentDate[i] = srcId[(i*4)+1]
+		}
+		_, err := time.Parse("2006010215", string(currentDate[0:10]))
+		if err != nil {
+			return ""
+		}
+		return string(currentDate[0:8]) + "/" + string(currentDate[0:10])
+	}
+	return ""
+
+}
+
 func (store FileStore) NewUpload(ctx context.Context, info handler.FileInfo) (handler.Upload, error) {
 	if info.ID == "" { 
 		info.ID = uid.Uid()
 	}
+	// create dir
+	dirPath := store.GetFileDirPath(info.ID)
+	if len(dirPath) > 0 {
+		if !isDirExists(store.Path + "/" + dirPath) {
+			err := os.MkdirAll(store.Path+"/"+dirPath, defaultFilePerm)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	binPath := store.binPath(info.ID)
 	info.Storage = map[string]string{
 		"Type": "filestore",
@@ -134,12 +183,22 @@ func (store FileStore) AsConcatableUpload(upload handler.Upload) handler.Concata
 
 // binPath returns the path to the file storing the binary data.
 func (store FileStore) binPath(id string) string {
-	return filepath.Join(store.Path, id)
+	//return filepath.Join(store.Path, id)
+	dirPath := store.GetFileDirPath(id)
+	if len(dirPath) == 0 {
+		return filepath.Join(store.Path, id+".bin")
+	}
+	return filepath.Join(store.Path, dirPath, id+".bin")
 }
 
 // infoPath returns the path to the .info file storing the file's info.
 func (store FileStore) infoPath(id string) string {
-	return filepath.Join(store.Path, id+".info")
+	//return filepath.Join(store.Path, id+".info")
+	dirPath := store.GetFileDirPath(id)
+	if len(dirPath) == 0 {
+		return filepath.Join(store.Path, id+".info")
+	}
+	return filepath.Join(store.Path, dirPath, id+".info")
 }
 
 type fileUpload struct {
