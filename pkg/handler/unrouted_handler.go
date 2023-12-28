@@ -729,7 +729,20 @@ func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if handler.composer.UsesLocker {
+	upload, err := handler.composer.Core.GetUpload(ctx, id)
+	if err != nil {
+		handler.sendError(w, r, err)
+		return
+	}
+
+	fileInfo, err := upload.GetInfo(ctx)
+
+	if err != nil {
+		handler.sendError(w, r, err)
+		return
+	}
+
+	if handler.composer.UsesLocker && fileInfo.Size != fileInfo.Offset {
 		lock, err := handler.lockUpload(id)
 		if err != nil {
 			handler.sendError(w, r, err)
@@ -737,12 +750,6 @@ func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) 
 		}
 
 		defer lock.Unlock()
-	}
-
-	upload, err := handler.composer.Core.GetUpload(ctx, id)
-	if err != nil {
-		handler.sendError(w, r, err)
-		return
 	}
 
 	info, err := upload.GetInfo(ctx)
