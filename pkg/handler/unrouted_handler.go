@@ -16,8 +16,10 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const UploadLengthDeferred = "1"
-const currentUploadDraftInteropVersion = "4"
+const (
+	UploadLengthDeferred             = "1"
+	currentUploadDraftInteropVersion = "4"
+)
 
 var (
 	reExtractFileID  = regexp.MustCompile(`([^/]+)\/?$`)
@@ -956,16 +958,6 @@ func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) 
 	}
 	c.log = c.log.With("id", id)
 
-	if handler.composer.UsesLocker {
-		lock, err := handler.lockUpload(c, id)
-		if err != nil {
-			handler.sendError(c, err)
-			return
-		}
-
-		defer lock.Unlock()
-	}
-
 	upload, err := handler.composer.Core.GetUpload(c, id)
 	if err != nil {
 		handler.sendError(c, err)
@@ -976,6 +968,17 @@ func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		handler.sendError(c, err)
 		return
+	}
+
+	// 如果 文件没上传完成，下载可以上锁，但是如果已经下载完成了，则不上锁
+	if handler.composer.UsesLocker && info.Size != info.Offset {
+		lock, err := handler.lockUpload(c, id)
+		if err != nil {
+			handler.sendError(c, err)
+			return
+		}
+
+		defer lock.Unlock()
 	}
 
 	contentType, contentDisposition := filterContentType(info)
