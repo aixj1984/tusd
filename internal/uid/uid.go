@@ -20,7 +20,7 @@ func Uid() string {
 		// for random bits.
 		panic(err)
 	}
-	//return hex.EncodeToString(id)
+	// return hex.EncodeToString(id)
 	// add time tag into uid
 	srcId := []byte(hex.EncodeToString(id))
 	currentDate := time.Now().Format("2006010215")
