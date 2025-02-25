@@ -108,10 +108,28 @@ func (store FileStore) NewUpload(ctx context.Context, info handler.FileInfo) (ha
 		}
 	}
 
+	// The .info file's location can directly be deduced from the upload ID
+	infoPath := store.infoPath(info.ID)
+
 	binPath := store.binPath(info.ID)
+	// The binary file's location might be modified by the pre-create hook.
+	// var binPath string
+	// if info.Storage != nil && info.Storage["Path"] != "" {
+	// 	// filepath.Join treats absolute and relative paths the same, so we must
+	// 	// handle them on our own. Absolute paths get used as-is, while relative
+	// 	// paths are joined to the storage path.
+	// 	if filepath.IsAbs(info.Storage["Path"]) {
+	// 		binPath = info.Storage["Path"]
+	// 	} else {
+	// 		binPath = filepath.Join(store.Path, info.Storage["Path"])
+	// 	}
+	// } else {
+	// 	binPath = store.binPath(info.ID)
+	// }
 	info.Storage = map[string]string{
-		"Type": "filestore",
-		"Path": binPath,
+		"Type":     "filestore",
+		"Path":     binPath,
+		"InfoPath": infoPath,
 	}
 
 	// Create binary file with no content
@@ -129,13 +147,12 @@ func (store FileStore) NewUpload(ctx context.Context, info handler.FileInfo) (ha
 
 	upload := &fileUpload{
 		info:     info,
-		infoPath: store.infoPath(info.ID),
+		infoPath: infoPath,
 		binPath:  binPath,
 	}
 
 	// writeInfo creates the file by itself if necessary
-	err = upload.writeInfo()
-	if err != nil {
+	if err := upload.writeInfo(); err != nil {
 		return nil, err
 	}
 
@@ -285,19 +302,26 @@ func (upload *fileUpload) ConcatUploads(ctx context.Context, uploads []handler.U
 	}()
 
 	for _, partialUpload := range uploads {
-		fileUpload := partialUpload.(*fileUpload)
-
-		src, err := os.Open(fileUpload.binPath)
-		if err != nil {
-			return err
-		}
-
-		if _, err := io.Copy(file, src); err != nil {
+		if err := partialUpload.(*fileUpload).appendTo(file); err != nil {
 			return err
 		}
 	}
 
 	return
+}
+
+func (upload *fileUpload) appendTo(file *os.File) error {
+	src, err := os.Open(upload.binPath)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(file, src); err != nil {
+		src.Close()
+		return err
+	}
+
+	return src.Close()
 }
 
 func (upload *fileUpload) DeclareLength(ctx context.Context, length int64) error {
