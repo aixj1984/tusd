@@ -4,6 +4,7 @@ data/
 node_modules/
 .DS_Store
 ./tusd
+cmd/tusd/tusd*
 tusd_*_*
 __pycache__/
 venv/
