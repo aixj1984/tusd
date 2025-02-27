@@ -60,8 +60,44 @@ func (locker FileLocker) UseIn(composer *handler.StoreComposer) {
 	composer.UseLocker(locker)
 }
 
+func (locker FileLocker) GetFileDirPath(id string) (path string) {
+	srcId := []byte(id)
+	if len(srcId) >= 32 && len(srcId) < 36 {
+		currentDate := [8]byte{0}
+		for i := 0; i < 8; i++ {
+			currentDate[i] = srcId[(i*4)+1]
+		}
+		_, err := time.Parse("20060102", string(currentDate[0:8]))
+		if err != nil {
+			return ""
+		}
+		return string(currentDate[0:8])
+	} else if len(srcId) >= 36 {
+		currentDate := [10]byte{0}
+		for i := 0; i < 10; i++ {
+			currentDate[i] = srcId[(i*4)+1]
+		}
+		_, err := time.Parse("2006010215", string(currentDate[0:10]))
+		if err != nil {
+			return ""
+		}
+		return string(currentDate[0:8]) + "/" + string(currentDate[0:10])
+	}
+	return ""
+}
+
+func (locker FileLocker) lockPath(id string) string {
+	// return filepath.Join(store.Path, id+".info")
+	dirPath := locker.GetFileDirPath(id)
+	if len(dirPath) == 0 {
+		return filepath.Join(locker.Path, id+".lock")
+	}
+	return filepath.Join(locker.Path, dirPath, id+".lock")
+}
+
 func (locker FileLocker) NewLock(id string) (handler.Lock, error) {
-	path, err := filepath.Abs(filepath.Join(locker.Path, id+".lock"))
+	// path, err := filepath.Abs(filepath.Join(locker.Path, id+".lock"))
+	path, err := filepath.Abs(locker.lockPath(id))
 	if err != nil {
 		return nil, err
 	}

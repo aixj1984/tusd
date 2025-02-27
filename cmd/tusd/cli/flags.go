@@ -18,6 +18,7 @@ var Flags struct {
 	EnableH2C                        bool
 	MaxSize                          int64
 	UploadDir                        string
+	MemoryLocker                     bool
 	Basepath                         string
 	ShowGreeting                     bool
 	DisableDownload                  bool
@@ -123,6 +124,7 @@ func ParseFlags() {
 
 	fs.AddGroup("File storage option", func(f *flag.FlagSet) {
 		f.StringVar(&Flags.UploadDir, "upload-dir", "./data", "Directory to store uploads in")
+		f.BoolVar(&Flags.MemoryLocker, "memory-locker", false, "Switch Memory Locker")
 		f.DurationVar(&Flags.FilelockHolderPollInterval, "filelock-holder-poll-interval", 5*time.Second, "The holder of a lock polls regularly to see if another request handler needs the lock. This flag specifies the poll interval.")
 		f.DurationVar(&Flags.FilelockAcquirerPollInterval, "filelock-acquirer-poll-interval", 2*time.Second, "The acquirer of a lock polls regularly to see if the lock has been released. This flag specifies the poll interval.")
 	})

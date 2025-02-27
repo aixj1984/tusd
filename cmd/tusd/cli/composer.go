@@ -143,17 +143,23 @@ func CreateComposer() {
 
 		printStartupLog("Using '%s' as directory storage.\n", dir)
 
-		if err := os.MkdirAll(dir, os.FileMode(0774)); err != nil {
+		if err := os.MkdirAll(dir, os.FileMode(0o774)); err != nil {
 			stderr.Fatalf("Unable to ensure directory exists: %s", err)
 		}
 
 		store := filestore.New(dir)
 		store.UseIn(Composer)
 
-		locker := filelocker.New(dir)
-		locker.AcquirerPollInterval = Flags.FilelockAcquirerPollInterval
-		locker.HolderPollInterval = Flags.FilelockHolderPollInterval
-		locker.UseIn(Composer)
+		if Flags.MemoryLocker {
+			printStartupLog("Using memory locker for storage.\n")
+			locker := memorylocker.New()
+			locker.UseIn(Composer)
+		} else {
+			locker := filelocker.New(dir)
+			locker.AcquirerPollInterval = Flags.FilelockAcquirerPollInterval
+			locker.HolderPollInterval = Flags.FilelockHolderPollInterval
+			locker.UseIn(Composer)
+		}
 	}
 
 	printStartupLog("Using %.2fMB as maximum size.\n", float64(Flags.MaxSize)/1024/1024)
