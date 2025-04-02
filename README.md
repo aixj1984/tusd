@@ -36,3 +36,9 @@ The entire documentation, including guides on installing, using, and configuring
 ## License
 
 This project is licensed under the MIT license, see `LICENSE.txt`.
+
+
+##  aliyun oss
+```
+--ali-storage=xxxx --ali-bucket=xxxx  --ali-endpoint=http://oss-cn-xxxxx.aliyuncs.com --ali-access-id=xxxxx --ali-access-secret=xxxx --ali-region-id=xxxx
+```

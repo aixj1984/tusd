@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tus/tusd/v2/pkg/alistore"
 	"github.com/tus/tusd/v2/pkg/azurestore"
 	"github.com/tus/tusd/v2/pkg/filelocker"
 	"github.com/tus/tusd/v2/pkg/filestore"
@@ -131,6 +132,63 @@ func CreateComposer() {
 		store := azurestore.New(azService)
 		store.ObjectPrefix = Flags.AzObjectPrefix
 		store.Container = Flags.AzStorage
+		store.UseIn(Composer)
+
+		locker := memorylocker.New()
+		locker.UseIn(Composer)
+	} else if Flags.AliStorage != "" {
+		bucket := os.Getenv("ALI_BUCKET")
+		if Flags.AliBucket == "" && bucket == "" {
+			stderr.Fatalf("No service bucket name for Ali Oss Storage in param or  ALI_BUCKET environment variable.\n")
+		}
+		if Flags.AliBucket == "" {
+			Flags.AliBucket = bucket
+		}
+
+		accessID := os.Getenv("ALI_ACCESS_ID")
+		if Flags.AliAccessId == "" && accessID == "" {
+			stderr.Fatalf("No service access name for Ali Oss Storage in param or  ALI_ACCESS_ID environment variable.\n")
+		}
+		if Flags.AliAccessId == "" {
+			Flags.AliAccessId = accessID
+		}
+
+		accessKey := os.Getenv("ALI_ACCESS_KEY")
+		if Flags.AliAccessSecret == "" && accessKey == "" {
+			stderr.Fatalf("No service account key for Ali Oss Storage in param or  ALI_ACCESS_KEY environment variable.\n")
+		}
+		if Flags.AliAccessSecret == "" {
+			Flags.AliAccessSecret = accessKey
+		}
+
+		endpoint := os.Getenv("ALI_ENDPOINT")
+		// // Enables support for using ali oss as a storage emulator without messing with proxies and stuff
+		// // e.g. http://oss-cn-xxxxx.aliyuncs.com
+		if Flags.AliEndpoint == "" && endpoint == "" {
+			stderr.Fatalf("No service endpoint  for Ali Oss Storage in param or ALI_ENDPOINT environment .\n")
+		}
+		if Flags.AliEndpoint == "" {
+			Flags.AliEndpoint = endpoint
+		}
+
+		aliConfig := &alistore.AliConfig{
+			Endpoint:        Flags.AliEndpoint,
+			AccessKeyId:     Flags.AliAccessId,
+			AccessKeySecret: Flags.AliAccessSecret,
+			BucketName:      Flags.AliBucket,
+			RegionId:        Flags.AliRegionId,
+		}
+
+		printStartupLog("Using Ali Oss endpoint %s.\n", aliConfig.Endpoint)
+
+		aliService, err := alistore.NewAliService(aliConfig)
+		if err != nil {
+			stderr.Fatalf(err.Error())
+		}
+
+		store := alistore.New(aliConfig.BucketName, aliService)
+		store.ObjectPrefix = Flags.AliObjectPrefix
+		store.Container = Flags.AliStorage
 		store.UseIn(Composer)
 
 		locker := memorylocker.New()

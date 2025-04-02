@@ -13,13 +13,13 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.0
 	github.com/Shopify/toxiproxy/v2 v2.11.0
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go-v2 v1.36.0
 	github.com/aws/aws-sdk-go-v2/config v1.29.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.75.2
 	github.com/aws/smithy-go v1.22.2
 	github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40
 	github.com/felixge/fgprof v0.9.5
-	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gofrs/uuid/v5 v5.3.1
 	github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d
 	github.com/golang/mock v1.6.0
@@ -39,6 +39,7 @@ require (
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.4
 	gopkg.in/h2non/gock.v1 v1.1.2
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (

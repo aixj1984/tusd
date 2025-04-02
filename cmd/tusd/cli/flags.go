@@ -85,6 +85,13 @@ var Flags struct {
 	FilelockAcquirerPollInterval     time.Duration
 	GracefulRequestCompletionTimeout time.Duration
 	ExperimentalProtocol             bool
+	AliStorage                       string
+	AliBucket                        string
+	AliObjectPrefix                  string
+	AliEndpoint                      string
+	AliAccessId                      string
+	AliAccessSecret                  string
+	AliRegionId                      string
 }
 
 func ParseFlags() {
@@ -153,6 +160,16 @@ func ParseFlags() {
 		f.StringVar(&Flags.AzBlobAccessTier, "azure-blob-access-tier", "", "Blob access tier when uploading new files (possible values: archive, cool, hot, '')")
 		f.StringVar(&Flags.AzObjectPrefix, "azure-object-prefix", "", "Prefix for Azure object names")
 		f.StringVar(&Flags.AzEndpoint, "azure-endpoint", "", "Custom Endpoint to use for Azure BlockBlob Storage (requires azure-storage to be pass)")
+	})
+
+	fs.AddGroup("Ali Oss Storage options", func(f *flag.FlagSet) {
+		f.StringVar(&Flags.AliStorage, "ali-storage", "", "Use Ali Oss Storage with this container as a storage backend (requires the AccessKeyId and AccessKeySecret  to be set)")
+		f.StringVar(&Flags.AliBucket, "ali-bucket", "", "Use AWS S3 with this bucket as storage backend (requires the ALI_ACCESS_ID, ALI_ACCESS_SECRET and ALI_ENDPOINT environment variables to be set)")
+		f.StringVar(&Flags.AliObjectPrefix, "ali-object-prefix", "", "Prefix for Ali Oss object names")
+		f.StringVar(&Flags.AliEndpoint, "ali-endpoint", "", "Ali Oss Endpoint")
+		f.StringVar(&Flags.AliAccessId, "ali-access-id", "", "Ali Oss AccessKeyId")
+		f.StringVar(&Flags.AliAccessSecret, "ali-access-secret", "", "Ali Oss AccessKeySecret")
+		f.StringVar(&Flags.AliRegionId, "ali-region-id", "", "Ali Oss  RegionId")
 	})
 
 	fs.AddGroup("General hook options", func(f *flag.FlagSet) {

@@ -11,3 +11,4 @@ venv/
 examples/hooks/plugin/hook_handler
 .idea/
 .vscode/
+cmd/tusd/log/*

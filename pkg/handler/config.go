@@ -142,7 +142,7 @@ var DefaultCorsConfig = CorsConfig{
 
 func (config *Config) validate() error {
 	if config.Logger == nil {
-		config.Logger = slog.Default()
+		config.Logger = GetLogHandler() // slog.Default()
 	}
 
 	base := config.BasePath

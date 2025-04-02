@@ -778,7 +778,6 @@ func (handler *UnroutedHandler) PatchFile(w http.ResponseWriter, r *http.Request
 		handler.sendError(c, ErrModifyFinal)
 		return
 	}
-
 	if offset != info.Offset {
 		handler.sendError(c, ErrMismatchOffset)
 		return
@@ -1027,12 +1026,14 @@ func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) 
 
 	upload, err := handler.composer.Core.GetUpload(c, id)
 	if err != nil {
+		slog.Debug(err.Error())
 		handler.sendError(c, err)
 		return
 	}
 
 	info, err := upload.GetInfo(c)
 	if err != nil {
+		slog.Debug(err.Error())
 		handler.sendError(c, err)
 		return
 	}
@@ -1040,13 +1041,14 @@ func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) 
 	if handler.composer.UsesLocker && info.Size != info.Offset {
 		lock, err := handler.lockUpload(c, id)
 		if err != nil {
+			slog.Debug(err.Error())
 			handler.sendError(c, err)
 			return
 		}
 
 		defer lock.Unlock()
 	}
-	
+
 	// Fall back to the existing GetReader implementation if ContentServerDataStore is not implemented
 
 	contentType, contentDisposition := filterContentType(info)
@@ -1099,9 +1101,12 @@ func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) 
 
 	src, err := upload.GetReader(c)
 	if err != nil {
+		fmt.Println(err.Error())
 		handler.sendError(c, err)
 		return
 	}
+
+	slog.Debug("get download reader")
 
 	handler.sendResp(c, resp)
 	io.Copy(w, src)
