@@ -46,6 +46,7 @@ func Serve() {
 		AcquireLockTimeout:               Flags.AcquireLockTimeout,
 		GracefulRequestCompletionTimeout: Flags.GracefulRequestCompletionTimeout,
 		NetworkTimeout:                   Flags.NetworkTimeout,
+		Logger:                           tushandler.GetLogHandler(),
 	}
 
 	var handler *tushandler.Handler
@@ -82,6 +83,8 @@ func Serve() {
 	}
 
 	printStartupLog("Using %s as the base path.\n", basepath)
+
+	config.Logger.Info("Starting tusd server", "address", address, "basepath", basepath)
 
 	mux := http.NewServeMux()
 	if basepath == "/" {
@@ -130,6 +133,7 @@ func Serve() {
 
 	if Flags.HttpSock == "" {
 		printStartupLog("You can now upload files to: %s://%s%s", protocol, listener.Addr(), basepath)
+		config.Logger.Info("You can now upload files", "address", listener.Addr(), "basepath", basepath)
 	}
 
 	serverCtx, cancelServerCtx := context.WithCancelCause(context.Background())
@@ -181,6 +185,7 @@ func Serve() {
 	if err == http.ErrServerClosed {
 		// ErrServerClosed means that http.Server.Shutdown was called due to an interruption signal.
 		// We wait until the interruption procedure is complete or times out and then exit main.
+		config.Logger.Info("Server Shutdown Complete")
 		<-shutdownComplete
 	} else {
 		// Any other error is relayed to the user.

@@ -35,7 +35,7 @@ function start() {
         return 1
     fi
 
-    #nohup ./$app --port 1080 --ali-bucket=xxxx  --ali-storage=xxxx --ali-endpoint=http://oss-cn-xxxx-internal.aliyuncs.com --ali-access-id=xxxx --ali-access-secret=xxx --ali-region-id=xxxx  --behind-proxy=true  > /dev/null  2>&1 &
+    #nohup ./$app --port 1080 --ali-bucket=xxxx  --ali-storage=xxxx --ali-endpoint=http://oss-cn-xxxx-internal.aliyuncs.com --ali-access-id=xxxx --ali-access-secret=xxx --ali-region-id=xxxx  --behind-proxy=true  > /dev/null 2> var/error.log & 
     nohup ./$app --port 2080 --upload-dir   /mnt/alioss   --memory-locker=true  --behind-proxy=true  &> $logfile &
     
     sleep 1
