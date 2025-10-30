@@ -93,6 +93,13 @@ var Flags struct {
 	AliAccessId                      string
 	AliAccessSecret                  string
 	AliRegionId                      string
+	TxStorage                        string
+	TxBucket                         string
+	TxObjectPrefix                   string
+	TxEndpoint                       string
+	TxAccessId                       string
+	TxAccessSecret                   string
+	TxRegionId                       string
 }
 
 func ParseFlags() {
@@ -171,7 +178,17 @@ func ParseFlags() {
 		f.StringVar(&Flags.AliEndpoint, "ali-endpoint", "", "Ali Oss Endpoint")
 		f.StringVar(&Flags.AliAccessId, "ali-access-id", "", "Ali Oss AccessKeyId")
 		f.StringVar(&Flags.AliAccessSecret, "ali-access-secret", "", "Ali Oss AccessKeySecret")
-		f.StringVar(&Flags.AliRegionId, "ali-region-id", "", "Ali Oss  RegionId")
+		f.StringVar(&Flags.AliRegionId, "ali-region-id", "", "Ali Oss RegionId")
+	})
+
+	fs.AddGroup("Tencent Oss Storage options", func(f *flag.FlagSet) {
+		f.StringVar(&Flags.TxStorage, "tx-storage", "", "Use Tencent Oss Storage with this container as a storage backend (requires the AccessKeyId and AccessKeySecret  to be set)")
+		f.StringVar(&Flags.TxBucket, "tx-bucket", "", "Use Tencent Oss with this bucket as storage backend (requires the TX_ACCESS_ID, TX_ACCESS_SECRET and TX_ENDPOINT environment variables to be set)")
+		f.StringVar(&Flags.TxObjectPrefix, "tx-object-prefix", "", "Prefix for Tencent Oss object names")
+		f.StringVar(&Flags.TxEndpoint, "tx-endpoint", "", "Tencent Oss Endpoint")
+		f.StringVar(&Flags.TxAccessId, "tx-access-id", "", "Tencent Oss AccessKeyId")
+		f.StringVar(&Flags.TxAccessSecret, "tx-access-secret", "", "Tencent Oss AccessKeySecret")
+		f.StringVar(&Flags.TxRegionId, "tx-region-id", "", "Tencent Oss RegionId")
 	})
 
 	fs.AddGroup("General hook options", func(f *flag.FlagSet) {

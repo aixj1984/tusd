@@ -2,7 +2,7 @@
 
 <img alt="Tus logo" src="https://github.com/tus/tus.io/blob/main/src/assets/logos-tus-default.svg?raw=true" width="30%" align="right" />
 
-> **tus** is a protocol based on HTTP for *resumable file uploads*. Resumable
+> **tus** is a protocol based on HTTP for _resumable file uploads_. Resumable
 > means that an upload can be interrupted at any moment and can be resumed without
 > re-uploading the previous data again. An interruption may happen willingly, if
 > the user wants to pause, or by accident in case of a network issue or server
@@ -37,8 +37,14 @@ The entire documentation, including guides on installing, using, and configuring
 
 This project is licensed under the MIT license, see `LICENSE.txt`.
 
+## aliyun oss
 
-##  aliyun oss
 ```
---ali-storage=xxxx --ali-bucket=xxxx  --ali-endpoint=http://oss-cn-xxxxx.aliyuncs.com --ali-access-id=xxxxx --ali-access-secret=xxxx --ali-region-id=xxxx
+nohup ./$app --port 1080   --ali-storage=xxxx --ali-bucket=xxxx  --ali-endpoint=http://oss-cn-xxxxx.aliyuncs.com --ali-access-id=xxxxx --ali-access-secret=xxxx --ali-region-id=xxxx  --behind-proxy=true  > /dev/null 2> var/error.log &
+```
+
+## tencent oss
+
+```
+nohup ./$app --port 1080    --tx-storage=xxxx --tx-bucket=xxxx  --tx-endpoint=oss-cn-xxxxx.tencentos.com --tx-access-id=xxxxx --tx-access-secret=xxxx --tx-region-id=xxxx  --behind-proxy=true  > /dev/null 2> var/error.log &
 ```

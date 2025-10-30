@@ -18,6 +18,7 @@ import (
 	"github.com/tus/tusd/v2/pkg/handler"
 	"github.com/tus/tusd/v2/pkg/memorylocker"
 	"github.com/tus/tusd/v2/pkg/s3store"
+	"github.com/tus/tusd/v2/pkg/txstore"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -149,6 +150,7 @@ func CreateComposer() {
 
 		locker := memorylocker.New()
 		locker.UseIn(Composer)
+
 	} else if Flags.AliStorage != "" {
 		bucket := os.Getenv("ALI_BUCKET")
 		if Flags.AliBucket == "" && bucket == "" {
@@ -202,6 +204,64 @@ func CreateComposer() {
 		store := alistore.New(aliConfig.BucketName, aliService)
 		store.ObjectPrefix = Flags.AliObjectPrefix
 		store.Container = Flags.AliStorage
+		store.UseIn(Composer)
+
+		locker := memorylocker.New()
+		locker.UseIn(Composer)
+
+	} else if Flags.TxStorage != "" {
+		bucket := os.Getenv("TX_BUCKET")
+		if Flags.TxBucket == "" && bucket == "" {
+			stderr.Fatalf("No service bucket name for Tencent Oss Storage in param or  TX_BUCKET environment variable.\n")
+		}
+		if Flags.TxBucket == "" {
+			Flags.TxBucket = bucket
+		}
+
+		accessID := os.Getenv("TX_ACCESS_ID")
+		if Flags.TxAccessId == "" && accessID == "" {
+			stderr.Fatalf("No service access name for Tencent Oss Storage in param or  TX_ACCESS_ID environment variable.\n")
+		}
+		if Flags.TxAccessId == "" {
+			Flags.TxAccessId = accessID
+		}
+
+		accessKey := os.Getenv("TX_ACCESS_KEY")
+		if Flags.TxAccessSecret == "" && accessKey == "" {
+			stderr.Fatalf("No service account key for Tencent Oss Storage in param or  TX_ACCESS_KEY environment variable.\n")
+		}
+		if Flags.TxAccessSecret == "" {
+			Flags.TxAccessSecret = accessKey
+		}
+
+		endpoint := os.Getenv("TX_ENDPOINT")
+		// // Enables support for using tx oss as a storage emulator without messing with proxies and stuff
+		// // e.g. http://oss-cn-xxxxx.aliyuncs.com
+		if Flags.TxEndpoint == "" && endpoint == "" {
+			stderr.Fatalf("No service endpoint  for Tencent Oss Storage in param or TX_ENDPOINT environment .\n")
+		}
+		if Flags.TxEndpoint == "" {
+			Flags.TxEndpoint = endpoint
+		}
+
+		txConfig := &txstore.TxConfig{
+			Endpoint:        Flags.TxEndpoint,
+			AccessKeyId:     Flags.TxAccessId,
+			AccessKeySecret: Flags.TxAccessSecret,
+			BucketName:      Flags.TxBucket,
+			RegionId:        Flags.TxRegionId,
+		}
+
+		printStartupLog("Using Tencent Oss endpoint %s.\n", txConfig.Endpoint)
+
+		txService, err := txstore.NewTxService(txConfig)
+		if err != nil {
+			stderr.Fatalf(err.Error())
+		}
+
+		store := txstore.New(txConfig.BucketName, txService)
+		store.ObjectPrefix = Flags.TxObjectPrefix
+		store.Container = Flags.TxStorage
 		store.UseIn(Composer)
 
 		locker := memorylocker.New()
