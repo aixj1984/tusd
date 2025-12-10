@@ -250,6 +250,7 @@ func (service *AliService) GetObject(ctx context.Context, params AliObjectParams
 	if val := reqHeaders.Get("If-None-Match"); val != "" {
 		options = append(options, oss.IfNoneMatch(val))
 	}
+	/* 缓存机制，先取消
 	if val := reqHeaders.Get("If-Modified-Since"); val != "" {
 		t, err := http.ParseTime(val)
 		if err == nil {
@@ -262,6 +263,7 @@ func (service *AliService) GetObject(ctx context.Context, params AliObjectParams
 			options = append(options, oss.IfUnmodifiedSince(t))
 		}
 	}
+	*/
 
 	// **关键：设置标准范围行为**
 	// 根据阿里云文档，要获得符合预期的范围请求行为（例如超出范围返回416），
