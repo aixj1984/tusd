@@ -33,7 +33,7 @@ So quit lollygagging, send over your files and experience the future!
 Version = %s
 GitCommit = %s
 BuildDate = %s
-`, Flags.Basepath, metricsInfo, VersionName, GitCommit, BuildDate)
+`, Flags.Basepath, metricsInfo, AppVersion, GitCommit, BuildDate)
 }
 
 func DisplayGreeting(w http.ResponseWriter, r *http.Request) {

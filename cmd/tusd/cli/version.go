@@ -4,10 +4,14 @@ import (
 	"fmt"
 )
 
-var VersionName = "n/a"
-var GitCommit = "n/a"
-var BuildDate = "n/a"
+var (
+	AppVersion = "n/a"
+	GitCommit  = "n/a"
+	BuildDate  = "n/a"
+	GitBranch  = "n/a"
+	GoVersion  = "n/a"
+)
 
 func ShowVersion() {
-	fmt.Printf("Version: %s\nCommit: %s\nDate: %s\n", VersionName, GitCommit, BuildDate)
+	fmt.Printf("AppVersion: %s\nGitCommit: %s\nBuildDate: %s\nGitBranch: %s\nGoVersion: %s\n", AppVersion, GitCommit, BuildDate, GitBranch, GoVersion)
 }

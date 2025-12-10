@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
@@ -97,6 +98,7 @@ func (a *AliOSSReader) Size() int64 {
 // to work with Google's cloud storage.
 type AliAPI interface {
 	ReadObject(ctx context.Context, params AliObjectParams) (AliReader, error)
+	GetObject(ctx context.Context, params AliObjectParams, headers *http.Header) (http.Header, io.ReadCloser, error)
 	GetObjectSize(ctx context.Context, params AliObjectParams) (int64, error)
 	SetObjectMetadata(ctx context.Context, params AliObjectParams, metadata map[string]string) error
 	DeleteObject(ctx context.Context, params AliObjectParams) error
@@ -194,6 +196,87 @@ func (service *AliService) ReadObject(ctx context.Context, params AliObjectParam
 		size:        totalSize,
 		remain:      totalSize,
 	}, nil
+}
+
+// ParseHTTPRangeHeader 解析HTTP Range头部，返回阿里云OSS NormalizedRange需要的格式
+func ParseHTTPRangeHeader(rangeHeader string) (string, error) {
+	if rangeHeader == "" {
+		return "", nil
+	}
+
+	// 去除空格
+	rangeHeader = strings.TrimSpace(rangeHeader)
+
+	// 检查是否是bytes=开头
+	if !strings.HasPrefix(rangeHeader, "bytes=") {
+		// 如果不是标准格式，直接返回空
+		return "", nil
+	}
+
+	// 去掉"bytes="前缀
+	rangeValue := strings.TrimSpace(rangeHeader[6:])
+
+	// 直接返回剩余的字符串，让SDK处理
+	// 如: "bytes=0-100" -> "0-100"
+	//     "bytes=100-"  -> "100-"
+	//     "bytes=-500"  -> "-500"
+	return rangeValue, nil
+}
+
+// ReadObject reads a AliObjectParams, returning a AliReader object if successful, and an error otherwise
+func (service *AliService) GetObject(ctx context.Context, params AliObjectParams, reqHeaders *http.Header) (http.Header, io.ReadCloser, error) {
+	// 获取对象
+
+	// 执行请求
+	// 注意：阿里云 OSS Go SDK 的常用接口是 bucket.GetObject，它接受多个 Option
+	// 根据文档，范围下载使用 oss.Range(start, end) 作为参数[citation:5]
+	// 条件参数如 oss.IfModifiedSince(t) 等
+	// 因此，一个更贴近 SDK 风格的实现可能是：
+	var options []oss.Option
+
+	// 处理 Range
+	if val := reqHeaders.Get("Range"); val != "" {
+		// 调用一个解析函数，获取 start 和 end
+		normalizedRange, err := ParseHTTPRangeHeader(val)
+		if err == nil {
+			options = append(options, oss.NormalizedRange(normalizedRange))
+		}
+	}
+
+	// 处理其他条件头
+	if val := reqHeaders.Get("If-Match"); val != "" {
+		options = append(options, oss.IfMatch(val))
+	}
+	if val := reqHeaders.Get("If-None-Match"); val != "" {
+		options = append(options, oss.IfNoneMatch(val))
+	}
+	if val := reqHeaders.Get("If-Modified-Since"); val != "" {
+		t, err := http.ParseTime(val)
+		if err == nil {
+			options = append(options, oss.IfModifiedSince(t))
+		}
+	}
+	if val := reqHeaders.Get("If-Unmodified-Since"); val != "" {
+		t, err := http.ParseTime(val)
+		if err == nil {
+			options = append(options, oss.IfUnmodifiedSince(t))
+		}
+	}
+
+	// **关键：设置标准范围行为**
+	// 根据阿里云文档，要获得符合预期的范围请求行为（例如超出范围返回416），
+	// 需要设置请求头 x-oss-range-behavior: standard[citation:1][citation:2][citation:3]
+	options = append(options, oss.RangeBehavior("standard"))
+
+	request := &oss.GetObjectRequest{ObjectKey: params.ID}
+
+	result, err := service.Client.DoGetObject(request, options)
+	if err != nil {
+		slog.Debug(err.Error())
+		return nil, nil, err
+	}
+
+	return result.Response.Headers, result.Response.Body, nil
 }
 
 // SetObjectMetadata reads a AliObjectParams and a map of metadata, returning a nil on success and an error otherwise
