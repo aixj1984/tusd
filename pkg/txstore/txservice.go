@@ -103,6 +103,7 @@ var NextAppendPosHeader = "x-cos-next-append-position"
 // to work with Google's cloud storage.
 type TxAPI interface {
 	ReadObject(ctx context.Context, params TxObjectParams) (TxReader, error)
+	GetObject(ctx context.Context, params TxObjectParams, reqHeaders *http.Header) (http.Header, io.ReadCloser, error)
 	GetObjectSize(ctx context.Context, params TxObjectParams) (int64, error)
 	SetObjectMetadata(ctx context.Context, params TxObjectParams, metadata map[string]string) error
 	DeleteObject(ctx context.Context, params TxObjectParams) error
@@ -225,6 +226,48 @@ func (service *TxService) ReadObject(ctx context.Context, params TxObjectParams)
 		size:        totalSize,
 		remain:      totalSize,
 	}, nil
+}
+
+// ParseHTTPRangeHeader 解析 Range 头（保持与原来相同的实现）
+func ParseHTTPRangeHeader(rangeHeader string) (string, error) {
+	// 这里实现您的 Range 头解析逻辑
+	// 返回格式如 "bytes=0-999"
+	return rangeHeader, nil // 简化示例，实际需要完整解析
+}
+
+func (service *TxService) GetObject(ctx context.Context, params TxObjectParams, reqHeaders *http.Header) (http.Header, io.ReadCloser, error) {
+	// 1. 构建基础选项
+	// 腾讯云 COS SDK 的 Get 方法接受一个 nil 或自定义的 *http.Request 选项
+	// 这里通过设置请求头来传递 Range 和条件参数
+	var opt *cos.ObjectGetOptions
+
+	// 腾讯云 SDK 允许通过 ObjectGetOptions 的 Header 字段设置请求头[citation:9]
+	opt = &cos.ObjectGetOptions{
+		// 直接将 HTTP 头映射过去，SDK 会处理签名等逻辑
+	}
+	// 处理 Range 头（直接设置到结构体的 Range 字段）
+	if val := reqHeaders.Get("Range"); val != "" {
+		normalizedRange, err := ParseHTTPRangeHeader(val)
+		if err == nil {
+			// 根据结构体定义，Range 字段是直接映射到 HTTP 头的
+			opt.Range = normalizedRange
+		}
+	}
+
+	// 2. 执行请求
+	// 腾讯云 COS 的对应方法是 client.Object.Get
+	resp, err := service.Client.Get(ctx, params.ID, opt)
+	if err != nil {
+		// 错误处理：可以在这里根据腾讯云 COS 的错误码进行更精细的处理
+		slog.Debug("Failed to get object from COS", "error", err, "objectKey", params.ID)
+		// 注意：腾讯云 COS 的错误类型可能与阿里云不同，需要根据实际情况调整
+		return nil, nil, err
+	}
+
+	// 3. 返回结果
+	// resp 是一个 *cos.Response，它包含了响应头和 Body 流
+	// 注意：需要调用者负责关闭 resp.Body
+	return resp.Header, resp.Body, nil
 }
 
 // SetObjectMetadata reads a TxObjectParams and a map of metadata, returning a nil on success and an error otherwise

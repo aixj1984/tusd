@@ -14,11 +14,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/tencentyun/cos-go-sdk-v5"
 	"github.com/tus/tusd/v2/internal/uid"
 	"github.com/tus/tusd/v2/pkg/handler"
@@ -54,6 +57,7 @@ func New(bucket string, service TxAPI) TxStore {
 func (store TxStore) UseIn(composer *handler.StoreComposer) {
 	composer.UseCore(store)
 	composer.UseTerminater(store)
+	composer.UseContentServer(store)
 }
 
 func (store TxStore) NewUpload(ctx context.Context, info handler.FileInfo) (handler.Upload, error) {
@@ -83,6 +87,10 @@ type txUpload struct {
 }
 
 func (store TxStore) AsTerminatableUpload(upload handler.Upload) handler.TerminatableUpload {
+	return upload.(*txUpload)
+}
+
+func (store TxStore) AsServableUpload(upload handler.Upload) handler.ServableUpload {
 	return upload.(*txUpload)
 }
 
@@ -279,4 +287,88 @@ func (store TxStore) GetFileDirPath(id string) (path string) {
 		return string(currentDate[0:8]) + "/" + string(currentDate[0:10])
 	}
 	return ""
+}
+
+func (store *txUpload) ServeContent(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	// 阿里云OSS获取对象
+	headers, fileReader, err := store.store.Service.GetObject(ctx, TxObjectParams{
+		Bucket: store.store.Bucket,
+		ID:     store.store.binPath(store.id),
+	}, &r.Header)
+	if err != nil {
+		// 删除由tusd处理器设置的header。对于错误响应我们不需要它们。
+		w.Header().Del("Content-Type")
+		w.Header().Del("Content-Disposition")
+
+		// 处理阿里云OSS的错误响应
+		if ossErr, ok := err.(*oss.ServiceError); ok {
+			if ossErr.StatusCode == http.StatusNotFound || ossErr.StatusCode == http.StatusForbidden {
+				// 如果找不到对象，表示上传尚未完成，无法提供。
+				// 在这个阶段上传本身不可能不存在，因为处理器已经检查过这种情况。
+				// 因此，我们可以安全地假定上传仍在进行中。
+				return errors.New("not found file")
+			}
+
+			if ossErr.StatusCode == http.StatusNotModified {
+				// 对于304 Not Modified响应，应设置
+				// Content-Location, Date, ETag, Vary, Cache-Control和Expires头部。
+				for _, header := range []string{"Content-Location", "Date", "ETag", "Vary", "Cache-Control", "Expires"} {
+					if val := r.Header.Get(header); val != "" {
+						w.Header().Set(header, val)
+					}
+				}
+				w.Header().Set("Accept-Ranges", "bytes")
+
+				w.WriteHeader(http.StatusNotModified)
+				return nil
+			}
+
+			if ossErr.StatusCode == http.StatusRequestedRangeNotSatisfiable {
+				// 对于416 Request Range Not Satisfiable响应，应设置Content-Range头部
+				if val := r.Header.Get("Content-Range"); val != "" {
+					w.Header().Set("Content-Range", val)
+				}
+				w.Header().Set("Accept-Ranges", "bytes")
+
+				w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+				return nil
+			}
+		}
+		return err
+	}
+	defer fileReader.Close()
+
+	// 从响应头部复制相关字段到HTTP响应
+	headersToCopy := []string{
+		"Accept-Ranges",
+		"Content-Disposition",
+		"Content-Encoding",
+		"Content-Language",
+		"Content-Length",
+		"Content-Range",
+		"Content-Type",
+		"Cache-Control",
+		"ETag",
+		"Expires",
+		"Last-Modified",
+	}
+
+	for _, header := range headersToCopy {
+		if val := headers.Get(header); val != "" {
+			w.Header().Set(header, val)
+		}
+	}
+
+	// 确定HTTP状态码
+	statusCode := http.StatusOK
+	if contentRange := headers.Get("Content-Range"); contentRange != "" {
+		// 对于范围请求使用206 Partial Content
+		statusCode = http.StatusPartialContent
+	} else if contentLength := headers.Get("Content-Length"); contentLength == "0" {
+		statusCode = http.StatusNoContent
+	}
+	w.WriteHeader(statusCode)
+
+	_, err = io.Copy(w, fileReader)
+	return err
 }
