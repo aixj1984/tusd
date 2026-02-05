@@ -15,10 +15,12 @@ import (
 )
 
 // Test interface implementation of Filestore
-var _ handler.DataStore = FileStore{}
-var _ handler.TerminaterDataStore = FileStore{}
-var _ handler.ConcaterDataStore = FileStore{}
-var _ handler.LengthDeferrerDataStore = FileStore{}
+var (
+	_ handler.DataStore               = FileStore{}
+	_ handler.TerminaterDataStore     = FileStore{}
+	_ handler.ConcaterDataStore       = FileStore{}
+	_ handler.LengthDeferrerDataStore = FileStore{}
+)
 
 func TestFilestore(t *testing.T) {
 	a := assert.New(t)

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
@@ -232,7 +233,16 @@ func (service *AliService) GetObject(ctx context.Context, params AliObjectParams
 	// 根据文档，范围下载使用 oss.Range(start, end) 作为参数[citation:5]
 	// 条件参数如 oss.IfModifiedSince(t) 等
 	// 因此，一个更贴近 SDK 风格的实现可能是：
-	var options []oss.Option
+	// var options []oss.Option
+
+	// 明确清除所有条件头
+	options := []oss.Option{
+		// 主动清除可能导致条件检查的头部
+		oss.IfMatch(""),                    // 清空 If-Match
+		oss.IfNoneMatch(""),                // 清空 If-None-Match (关键！)
+		oss.IfModifiedSince(time.Time{}),   // 清空 If-Modified-Since
+		oss.IfUnmodifiedSince(time.Time{}), // 清空 If-Unmodified-Since
+	}
 
 	// 处理 Range
 	if val := reqHeaders.Get("Range"); val != "" {
@@ -242,27 +252,27 @@ func (service *AliService) GetObject(ctx context.Context, params AliObjectParams
 			options = append(options, oss.NormalizedRange(normalizedRange))
 		}
 	}
-
-	// 处理其他条件头
-	if val := reqHeaders.Get("If-Match"); val != "" {
-		options = append(options, oss.IfMatch(val))
-	}
-	if val := reqHeaders.Get("If-None-Match"); val != "" {
-		options = append(options, oss.IfNoneMatch(val))
-	}
-	/* 缓存机制，先取消
-	if val := reqHeaders.Get("If-Modified-Since"); val != "" {
-		t, err := http.ParseTime(val)
-		if err == nil {
-			options = append(options, oss.IfModifiedSince(t))
+	/*
+		// 处理其他条件头
+		if val := reqHeaders.Get("If-Match"); val != "" {
+			options = append(options, oss.IfMatch(val))
 		}
-	}
-	if val := reqHeaders.Get("If-Unmodified-Since"); val != "" {
-		t, err := http.ParseTime(val)
-		if err == nil {
-			options = append(options, oss.IfUnmodifiedSince(t))
+		if val := reqHeaders.Get("If-None-Match"); val != "" {
+			options = append(options, oss.IfNoneMatch(val))
 		}
-	}
+		// 缓存机制，先取消
+		if val := reqHeaders.Get("If-Modified-Since"); val != "" {
+			t, err := http.ParseTime(val)
+			if err == nil {
+				options = append(options, oss.IfModifiedSince(t))
+			}
+		}
+		if val := reqHeaders.Get("If-Unmodified-Since"); val != "" {
+			t, err := http.ParseTime(val)
+			if err == nil {
+				options = append(options, oss.IfUnmodifiedSince(t))
+			}
+		}
 	*/
 
 	// **关键：设置标准范围行为**

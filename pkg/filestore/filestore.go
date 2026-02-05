@@ -27,6 +27,13 @@ import (
 	"github.com/tus/tusd/v2/pkg/handler"
 )
 
+const (
+	// StorageKeyPath is the key of the path of uploaded file in handler.FileInfo.Storage
+	StorageKeyPath = "Path"
+	// StorageKeyInfoPath is the key of the path of .info file in handler.FileInfo.Storage
+	StorageKeyInfoPath = "InfoPath"
+)
+
 var (
 	defaultFilePerm      = os.FileMode(0o664)
 	defaultDirectoryPerm = os.FileMode(0o754)
