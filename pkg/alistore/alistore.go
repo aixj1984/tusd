@@ -290,6 +290,16 @@ func (store AliStore) GetFileDirPath(id string) (path string) {
 	return ""
 }
 
+// setDownloadNoCacheHeaders forces download responses to not be cached by clients or shared caches.
+func setDownloadNoCacheHeaders(w http.ResponseWriter) {
+	h := w.Header()
+	h.Set("Cache-Control", "no-store")
+	h.Set("Pragma", "no-cache")
+	h.Del("ETag")
+	h.Del("Expires")
+	h.Del("Last-Modified")
+}
+
 func (store *aliUpload) ServeContent(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	// 阿里云OSS获取对象
 	headers, fileReader, err := store.store.Service.GetObject(ctx, AliObjectParams{
@@ -311,15 +321,8 @@ func (store *aliUpload) ServeContent(ctx context.Context, w http.ResponseWriter,
 			}
 
 			if ossErr.StatusCode == http.StatusNotModified {
-				// 对于304 Not Modified响应，应设置
-				// Content-Location, Date, ETag, Vary, Cache-Control和Expires头部。
-				for _, header := range []string{"Content-Location", "Date", "ETag", "Vary", "Cache-Control", "Expires"} {
-					if val := r.Header.Get(header); val != "" {
-						w.Header().Set(header, val)
-					}
-				}
 				w.Header().Set("Accept-Ranges", "bytes")
-
+				setDownloadNoCacheHeaders(w)
 				w.WriteHeader(http.StatusNotModified)
 				return nil
 			}
@@ -330,6 +333,7 @@ func (store *aliUpload) ServeContent(ctx context.Context, w http.ResponseWriter,
 					w.Header().Set("Content-Range", val)
 				}
 				w.Header().Set("Accept-Ranges", "bytes")
+				setDownloadNoCacheHeaders(w)
 
 				w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
 				return nil
@@ -339,7 +343,7 @@ func (store *aliUpload) ServeContent(ctx context.Context, w http.ResponseWriter,
 	}
 	defer fileReader.Close()
 
-	// 从响应头部复制相关字段到HTTP响应
+	// 从响应头部复制相关字段到HTTP响应（不透传 OSS 的缓存/校验头，避免 Range 与二次播放被错误缓存）
 	headersToCopy := []string{
 		"Accept-Ranges",
 		"Content-Disposition",
@@ -348,10 +352,6 @@ func (store *aliUpload) ServeContent(ctx context.Context, w http.ResponseWriter,
 		"Content-Length",
 		"Content-Range",
 		"Content-Type",
-		"Cache-Control",
-		"ETag",
-		"Expires",
-		"Last-Modified",
 	}
 
 	for _, header := range headersToCopy {
@@ -359,6 +359,7 @@ func (store *aliUpload) ServeContent(ctx context.Context, w http.ResponseWriter,
 			w.Header().Set(header, val)
 		}
 	}
+	setDownloadNoCacheHeaders(w)
 
 	// 确定HTTP状态码
 	statusCode := http.StatusOK
