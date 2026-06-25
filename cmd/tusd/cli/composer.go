@@ -12,6 +12,7 @@ import (
 	"github.com/tus/tusd/v2/internal/s3log"
 	"github.com/tus/tusd/v2/pkg/alistore"
 	"github.com/tus/tusd/v2/pkg/azurestore"
+	"github.com/tus/tusd/v2/pkg/baidustore"
 	"github.com/tus/tusd/v2/pkg/filelocker"
 	"github.com/tus/tusd/v2/pkg/filestore"
 	"github.com/tus/tusd/v2/pkg/gcsstore"
@@ -262,6 +263,61 @@ func CreateComposer() {
 		store := txstore.New(txConfig.BucketName, txService)
 		store.ObjectPrefix = Flags.TxObjectPrefix
 		store.Container = Flags.TxStorage
+		store.UseIn(Composer)
+
+		locker := memorylocker.New()
+		locker.UseIn(Composer)
+	} else if Flags.BaiduStorage != "" {
+		bucket := os.Getenv("BAIDU_BUCKET")
+		if Flags.BaiduBucket == "" && bucket == "" {
+			stderr.Fatalf("No service bucket name for Baidu BOS in param or BAIDU_BUCKET environment variable.\n")
+		}
+		if Flags.BaiduBucket == "" {
+			Flags.BaiduBucket = bucket
+		}
+
+		accessID := os.Getenv("BAIDU_ACCESS_ID")
+		if Flags.BaiduAccessId == "" && accessID == "" {
+			stderr.Fatalf("No service access id for Baidu BOS in param or BAIDU_ACCESS_ID environment variable.\n")
+		}
+		if Flags.BaiduAccessId == "" {
+			Flags.BaiduAccessId = accessID
+		}
+
+		accessKey := os.Getenv("BAIDU_ACCESS_SECRET")
+		if Flags.BaiduAccessSecret == "" && accessKey == "" {
+			stderr.Fatalf("No service access secret for Baidu BOS in param or BAIDU_ACCESS_SECRET environment variable.\n")
+		}
+		if Flags.BaiduAccessSecret == "" {
+			Flags.BaiduAccessSecret = accessKey
+		}
+
+		endpoint := os.Getenv("BAIDU_ENDPOINT")
+		if Flags.BaiduEndpoint == "" && endpoint == "" {
+			stderr.Fatalf("No service endpoint for Baidu BOS in param or BAIDU_ENDPOINT environment variable.\n")
+		}
+		if Flags.BaiduEndpoint == "" {
+			Flags.BaiduEndpoint = endpoint
+		}
+
+		baiduConfig := &baidustore.BaiduConfig{
+			Endpoint:        Flags.BaiduEndpoint,
+			AccessKeyId:     Flags.BaiduAccessId,
+			AccessKeySecret: Flags.BaiduAccessSecret,
+			BucketName:      Flags.BaiduBucket,
+			RegionId:        Flags.BaiduRegionId,
+		}
+
+		printStartupLog("Using Baidu BOS endpoint %s.\n", baiduConfig.Endpoint)
+
+		baiduService, err := baidustore.NewBaiduService(baiduConfig)
+		if err != nil {
+			stderr.Fatalf(err.Error())
+		}
+
+		store := baidustore.New(baiduConfig.BucketName, baiduService)
+		store.ObjectPrefix = Flags.BaiduObjectPrefix
+		store.Container = Flags.BaiduStorage
 		store.UseIn(Composer)
 
 		locker := memorylocker.New()

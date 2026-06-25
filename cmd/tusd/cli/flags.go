@@ -100,6 +100,13 @@ var Flags struct {
 	TxAccessId                       string
 	TxAccessSecret                   string
 	TxRegionId                       string
+	BaiduStorage                     string
+	BaiduBucket                      string
+	BaiduObjectPrefix                string
+	BaiduEndpoint                    string
+	BaiduAccessId                    string
+	BaiduAccessSecret                string
+	BaiduRegionId                    string
 }
 
 func ParseFlags() {
@@ -189,6 +196,16 @@ func ParseFlags() {
 		f.StringVar(&Flags.TxAccessId, "tx-access-id", "", "Tencent Oss AccessKeyId")
 		f.StringVar(&Flags.TxAccessSecret, "tx-access-secret", "", "Tencent Oss AccessKeySecret")
 		f.StringVar(&Flags.TxRegionId, "tx-region-id", "", "Tencent Oss RegionId")
+	})
+
+	fs.AddGroup("Baidu BOS Storage options", func(f *flag.FlagSet) {
+		f.StringVar(&Flags.BaiduStorage, "baidu-storage", "", "Use Baidu BOS with this container label as a storage backend (requires AccessKeyId and AccessKeySecret to be set)")
+		f.StringVar(&Flags.BaiduBucket, "baidu-bucket", "", "Use Baidu BOS with this bucket as storage backend (requires BAIDU_ACCESS_ID, BAIDU_ACCESS_SECRET and BAIDU_ENDPOINT environment variables to be set)")
+		f.StringVar(&Flags.BaiduObjectPrefix, "baidu-object-prefix", "", "Prefix for Baidu BOS object names")
+		f.StringVar(&Flags.BaiduEndpoint, "baidu-endpoint", "", "Baidu BOS endpoint, e.g. https://bj.bcebos.com")
+		f.StringVar(&Flags.BaiduAccessId, "baidu-access-id", "", "Baidu BOS AccessKeyId")
+		f.StringVar(&Flags.BaiduAccessSecret, "baidu-access-secret", "", "Baidu BOS AccessKeySecret")
+		f.StringVar(&Flags.BaiduRegionId, "baidu-region-id", "", "Baidu BOS region id")
 	})
 
 	fs.AddGroup("General hook options", func(f *flag.FlagSet) {

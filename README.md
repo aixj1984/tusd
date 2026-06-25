@@ -48,3 +48,15 @@ nohup ./$app --port 1080   --ali-storage=xxxx --ali-bucket=xxxx  --ali-endpoint=
 ```
 nohup ./$app --port 1080    --tx-storage=xxxx --tx-bucket=xxxx  --tx-endpoint=oss-cn-xxxxx.tencentos.com --tx-access-id=xxxxx --tx-access-secret=xxxx --tx-region-id=xxxx  --behind-proxy=true  > /dev/null 2> var/error.log &
 ```
+
+## baidu bos
+
+```
+nohup ./$app --port 1080 \
+  --baidu-storage=xxxxx \
+  --baidu-bucket=xxxxx \
+  --baidu-endpoint=xxxxx\
+  --baidu-access-id=xxxx \
+  --baidu-access-secret=xxxxx \
+  --behind-proxy=true  > /dev/null 2> var/error.log &
+```

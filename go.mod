@@ -19,6 +19,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.92.1
 	github.com/aws/smithy-go v1.23.2
+	github.com/baidubce/bce-sdk-go v0.9.270
 	github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40
 	github.com/felixge/fgprof v0.9.5
 	github.com/gofrs/uuid/v5 v5.3.1
