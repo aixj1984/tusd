@@ -52,11 +52,5 @@ nohup ./$app --port 1080    --tx-storage=xxxx --tx-bucket=xxxx  --tx-endpoint=os
 ## baidu bos
 
 ```
-nohup ./$app --port 1080 \
-  --baidu-storage=xxxxx \
-  --baidu-bucket=xxxxx \
-  --baidu-endpoint=xxxxx\
-  --baidu-access-id=xxxx \
-  --baidu-access-secret=xxxxx \
-  --behind-proxy=true  > /dev/null 2> var/error.log &
+nohup ./$app --port 1080   --baidu-storage=xxxxx   --baidu-bucket=xxxxx   --baidu-endpoint=xxxxx   --baidu-access-id=xxxx   --baidu-access-secret=xxxxx  --behind-proxy=true  > /dev/null 2> var/error.log &
 ```
