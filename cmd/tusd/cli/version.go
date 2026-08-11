@@ -13,5 +13,10 @@ var (
 )
 
 func ShowVersion() {
-	fmt.Printf("AppVersion: %s\nGitCommit: %s\nBuildDate: %s\nGitBranch: %s\nGoVersion: %s\n", AppVersion, GitCommit, BuildDate, GitBranch, GoVersion)
+	fmt.Printf("Version Info:\n")
+	fmt.Printf("  AppVersion:  %s\n", AppVersion)
+	fmt.Printf("  Git Commit:  %s\n", GitCommit)
+	fmt.Printf("  Git Branch:  %s\n", GitBranch)
+	fmt.Printf("  Build Date:  %s\n", BuildDate)
+	fmt.Printf("  Go Version:  %s\n", GoVersion)
 }
