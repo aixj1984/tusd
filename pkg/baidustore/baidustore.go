@@ -283,14 +283,22 @@ func (upload *baiduUpload) ServeContent(ctx context.Context, w http.ResponseWrit
 	}
 	defer fileReader.Close()
 
+	// Always derive Content-Type / Content-Disposition from upload metadata
+	// (images → inline, zip/other → attachment+filename, etc.). Do not copy
+	// these from BOS: objects are stored as *.bin and default to
+	// application/octet-stream, which breaks browser preview and download.
+	if upload.info != nil {
+		contentType, contentDisposition := handler.FilterContentType(*upload.info)
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Disposition", contentDisposition)
+	}
+
 	headersToCopy := []string{
 		"Accept-Ranges",
-		"Content-Disposition",
 		"Content-Encoding",
 		"Content-Language",
 		"Content-Length",
 		"Content-Range",
-		"Content-Type",
 	}
 
 	for _, header := range headersToCopy {

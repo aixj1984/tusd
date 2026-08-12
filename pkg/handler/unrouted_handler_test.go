@@ -98,7 +98,7 @@ func TestFilterContentType(t *testing.T) {
 			t.Parallel()
 			a := assert.New(t)
 
-			gotContentType, gotContentDisposition := filterContentType(test.input)
+			gotContentType, gotContentDisposition := FilterContentType(test.input)
 
 			a.Equal(test.contentType, gotContentType)
 			a.Equal(test.contentDisposition, gotContentDisposition)

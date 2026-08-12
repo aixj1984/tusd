@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/baidubce/bce-sdk-go/bce"
@@ -198,16 +199,24 @@ func TestServeContentPartialNoCache(t *testing.T) {
 			h := http.Header{}
 			h.Set("Content-Range", "bytes 0-4/5")
 			h.Set("Content-Length", "5")
-			h.Set("Content-Type", "video/mp4")
+			// BOS default for *.bin; must not override upload metadata headers.
+			h.Set("Content-Type", "application/octet-stream")
+			h.Set("Content-Disposition", "attachment")
 			h.Set("Accept-Ranges", "bytes")
 			return h, io.NopCloser(bytes.NewReader([]byte(body))), nil
 		},
 	}
 	store := BaiduStore{Bucket: "bos-bucket", Service: mock}
 	upload := &baiduUpload{
-		id: "upload-id",
+		id:    "upload-id",
 		store: &store,
-		info: &handler.FileInfo{ID: "upload-id"},
+		info: &handler.FileInfo{
+			ID: "upload-id",
+			MetaData: map[string]string{
+				"filetype": "video/mp4",
+				"filename": "demo.mp4",
+			},
+		},
 	}
 
 	w := httptest.NewRecorder()
@@ -222,7 +231,70 @@ func TestServeContentPartialNoCache(t *testing.T) {
 	assert.Equal(t, "no-cache", w.Header().Get("Pragma"))
 	assert.Empty(t, w.Header().Get("ETag"))
 	assert.Equal(t, "bytes 0-4/5", w.Header().Get("Content-Range"))
+	assert.Equal(t, "video/mp4", w.Header().Get("Content-Type"))
+	assert.Equal(t, `inline;filename="demo.mp4"`, w.Header().Get("Content-Disposition"))
 	assert.Equal(t, body, w.Body.String())
+}
+
+func TestServeContentUsesMetadataForImageAndZip(t *testing.T) {
+	tests := []struct {
+		name               string
+		filetype           string
+		filename           string
+		wantType           string
+		wantDisposition    string
+	}{
+		{
+			name:            "image inline",
+			filetype:        "image/jpeg",
+			filename:        "photo.jpg",
+			wantType:        "image/jpeg",
+			wantDisposition: `inline;filename="photo.jpg"`,
+		},
+		{
+			name:            "zip attachment",
+			filetype:        "application/zip",
+			filename:        "archive.zip",
+			wantType:        "application/zip",
+			wantDisposition: `attachment;filename="archive.zip"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			const body = "data"
+			mock := &mockBaiduAPI{
+				getObjectFn: func(ctx context.Context, params BaiduObjectParams, reqHeaders *http.Header) (http.Header, io.ReadCloser, error) {
+					h := http.Header{}
+					h.Set("Content-Length", strconv.Itoa(len(body)))
+					h.Set("Content-Type", "application/octet-stream")
+					h.Set("Accept-Ranges", "bytes")
+					return h, io.NopCloser(bytes.NewReader([]byte(body))), nil
+				},
+			}
+			upload := &baiduUpload{
+				id:    "upload-id",
+				store: &BaiduStore{Bucket: "bos-bucket", Service: mock},
+				info: &handler.FileInfo{
+					ID: "upload-id",
+					MetaData: map[string]string{
+						"filetype": tt.filetype,
+						"filename": tt.filename,
+					},
+				},
+			}
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			err := upload.ServeContent(context.Background(), w, r)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, tt.wantType, w.Header().Get("Content-Type"))
+			assert.Equal(t, tt.wantDisposition, w.Header().Get("Content-Disposition"))
+			assert.Equal(t, body, w.Body.String())
+		})
+	}
 }
 
 func TestServeContentNotFound(t *testing.T) {
